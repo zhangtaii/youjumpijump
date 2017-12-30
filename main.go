@@ -157,6 +157,6 @@ func main() {
 		}
 
 		infile.Close()
-		time.Sleep(time.Millisecond * 1500)
+		time.Sleep(time.Millisecond * time.Duration(seededRand.Intn(1000) + 1500))
 	}
 }
