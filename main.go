@@ -11,7 +11,7 @@ import (
 	"runtime/debug"
 	"strconv"
 	"time"
-
+	"math/rand"
 	"github.com/nfnt/resize"
 )
 
@@ -32,6 +32,25 @@ func colorSimilar(a, b [3]int, distance float64) bool {
 	return (math.Abs(float64(a[0]-b[0])) < distance) && (math.Abs(float64(a[1]-b[1])) < distance) && (math.Abs(float64(a[2]-b[2])) < distance)
 }
 
+const charset = "abcdefghijklmnopqrstuvwxyz" +
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+var seededRand *rand.Rand = rand.New(
+  rand.NewSource(time.Now().UnixNano()))
+
+func StringWithCharset(length int, charset string) string {
+  b := make([]byte, length)
+  for i := range b {
+    b[i] = charset[seededRand.Intn(len(charset))]
+  }
+  return string(b)
+}
+
+func String(length int) string {
+  return StringWithCharset(length, charset)
+}
+
+
 func main() {
 	defer func() {
 		if e := recover(); e != nil {
@@ -50,13 +69,22 @@ func main() {
 	}
 
 	for {
-		_, err := exec.Command("adb", "shell", "screencap", "-p", "/sdcard/jump.png").Output()
+		screenshotPath := fmt.Sprintf("/sdcard/beam/jump_%s.png", String(4))
+		fmt.Println("screenshotPath", screenshotPath)
+
+		_, err := exec.Command("adb", "shell", "screencap", "-p", screenshotPath).Output()
 		if err != nil {
-			panic("ADB 执行失败，请手动执行 \"adb shell screencap -p /sdcard/jump.png\" 看是否有报错")
+			panic(fmt.Sprintf("ADB 截图失败，请手动执行 \"adb shell screencap -p %s\" 看是否有报错", screenshotPath))
 		}
-		_, err = exec.Command("adb", "pull", "/sdcard/jump.png", ".").Output()
+		_, err = exec.Command("adb", "pull", screenshotPath, "./jump.png").Output()
 		if err != nil {
-			panic("ADB 执行失败，请手动执行 \"adb pull /sdcard/jump.png .\" 看是否有报错")
+			panic(fmt.Sprintf("ADB 拉取截图失败，请手动执行 \"adb pull %s\" 看是否有报错", screenshotPath))
+		}
+
+		args := []string{"shell", "rm", screenshotPath}
+		_, err = exec.Command("adb", args...).Output()
+		if err != nil {
+			panic(fmt.Sprintf("ADB 清除截图失败，请手动执行 \"adb shell rm  %s\" 看是否有报错", screenshotPath))
 		}
 
 		infile, err := os.Open("jump.png")
